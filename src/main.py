@@ -11,7 +11,11 @@ st.set_page_config(
 )
 
 st.title("seam carving demo")
-st.caption("upload an image, choose a smaller target size, and carve seams")
+st.caption(
+    "upload an image, choose a smaller target size, and carve seams"
+    " · by Tisca Catalin (intheloop) — "
+    "[tiscacatalin.com](https://tiscacatalin.com)"
+)
 
 # persist carved result across reruns (e.g., after pressing download)
 if "carved" not in st.session_state:
