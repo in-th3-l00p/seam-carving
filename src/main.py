@@ -13,9 +13,24 @@ st.set_page_config(
 st.title("seam carving demo")
 st.caption("upload an image, choose a smaller target size, and carve seams")
 
+# persist carved result across reruns (e.g., after pressing download)
+if "carved" not in st.session_state:
+    st.session_state["carved"] = None
+    st.session_state["carved_png"] = None
+    st.session_state["carved_meta"] = None
+    st.session_state["upload_sig"] = None
+
 uploaded = st.file_uploader("upload image", type=["png", "jpg", "jpeg", "bmp", "webp"])
 
 if uploaded is not None:
+    # reset stored result when a new file is uploaded
+    upload_sig = (getattr(uploaded, "name", None), getattr(uploaded, "size", None))
+    if upload_sig != st.session_state.get("upload_sig"):
+        st.session_state["upload_sig"] = upload_sig
+        st.session_state["carved"] = None
+        st.session_state["carved_png"] = None
+        st.session_state["carved_meta"] = None
+
     file_bytes = np.asarray(bytearray(uploaded.read()), dtype=np.uint8)
     img_bgr = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
     if img_bgr is None:
@@ -67,35 +82,45 @@ if uploaded is not None:
                     st.exception(e)
                     out = None
             if out is not None:
-                # row 2: result + next seams (preview on carved image)
-                st.subheader("resized and next seams")
-                try:
-                    res_carver = SeamCarving(out)
-                    out_v = res_carver.show_vertical()
-                    out_h = res_carver.show_horizontal()
-                except Exception as e:
-                    st.exception(e)
-                    out_v, out_h = None, None
+                # store result in session so downloads/reruns don't clear it
+                st.session_state["carved"] = out
+                out_bgr = cv2.cvtColor(out, cv2.COLOR_RGB2BGR)
+                ok, png_bytes = cv2.imencode(".png", out_bgr)
+                st.session_state["carved_png"] = png_bytes.tobytes() if ok else None
+                st.session_state["carved_meta"] = {
+                    "orig_shape": (int(h), int(w)),
+                    "target": (int(target_w), int(target_h)),
+                }
 
-                r1, r2, r3 = st.columns(3)
-                with r1:
-                    st.caption("resized")
-                    st.image(out, channels="RGB", width="content")
-                    # enable download under the resized preview
-                    out_bgr = cv2.cvtColor(out, cv2.COLOR_RGB2BGR)
-                    ok, png_bytes = cv2.imencode(".png", out_bgr)
-                    if ok:
-                        st.download_button(
-                            label="download resized (PNG)",
-                            data=png_bytes.tobytes(),
-                            file_name="seam_carved.png",
-                            mime="image/png",
-                        )
-                with r2:
-                    st.caption("next vertical seam (resized)")
-                    if out_v is not None:
-                        st.image(out_v, channels="RGB", width="content")
-                with r3:
-                    st.caption("next horizontal seam (resized)")
-                    if out_h is not None:
-                        st.image(out_h, channels="RGB", width="content")
+        # always render carved preview if available
+        carved = st.session_state.get("carved")
+        if carved is not None:
+            st.subheader("resized and next seams")
+            try:
+                res_carver = SeamCarving(carved)
+                out_v = res_carver.show_vertical()
+                out_h = res_carver.show_horizontal()
+            except Exception as e:
+                st.exception(e)
+                out_v, out_h = None, None
+
+            r1, r2, r3 = st.columns(3)
+            with r1:
+                st.caption("resized")
+                st.image(carved, channels="RGB", width="content")
+                # download persists across reruns
+                if st.session_state.get("carved_png") is not None:
+                    st.download_button(
+                        label="download resized (PNG)",
+                        data=st.session_state["carved_png"],
+                        file_name="seam_carved.png",
+                        mime="image/png",
+                    )
+            with r2:
+                st.caption("next vertical seam (resized)")
+                if out_v is not None:
+                    st.image(out_v, channels="RGB", width="content")
+            with r3:
+                st.caption("next horizontal seam (resized)")
+                if out_h is not None:
+                    st.image(out_h, channels="RGB", width="content")
