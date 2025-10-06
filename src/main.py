@@ -1,6 +1,3 @@
-import io
-from typing import Tuple
-
 import numpy as np
 import streamlit as st
 import cv2
@@ -27,14 +24,35 @@ if uploaded is not None:
         img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
         h, w = img_rgb.shape[:2]
 
-        st.subheader("original")
-        st.image(img_rgb, channels="RGB", width="stretch")
+        # row 1: original + next seams (preview)
+        st.subheader("original and next seams")
+        try:
+            orig_carver = SeamCarving(img_rgb)
+            img_v = orig_carver.show_vertical()
+            img_h = orig_carver.show_horizontal()
+        except Exception as e:
+            st.exception(e)
+            img_v, img_h = None, None
 
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.caption("original")
+            st.image(img_rgb, channels="RGB", width="content")
+        with c2:
+            st.caption("next vertical seam")
+            if img_v is not None:
+                st.image(img_v, channels="RGB", width="content")
+        with c3:
+            st.caption("next horizontal seam")
+            if img_h is not None:
+                st.image(img_h, channels="RGB", width="content")
+
+        # sliders to change target dimensions (must be <= original)
         col1, col2 = st.columns(2)
         with col1:
-            target_w = st.number_input("target width", min_value=1, max_value=w, value=max(1, w // 2))
+            target_w = st.slider("target width", min_value=1, max_value=int(w), value=int(max(1, w // 2)))
         with col2:
-            target_h = st.number_input("target height", min_value=1, max_value=h, value=max(1, h // 2))
+            target_h = st.slider("target height", min_value=1, max_value=int(h), value=int(max(1, h // 2)))
 
         if target_w > w or target_h > h:
             st.warning("target size must be smaller than the original (only shrinking supported)")
@@ -49,16 +67,35 @@ if uploaded is not None:
                     st.exception(e)
                     out = None
             if out is not None:
-                st.subheader("result")
-                st.image(out, channels="RGB", width="stretch")
+                # row 2: result + next seams (preview on carved image)
+                st.subheader("resized and next seams")
+                try:
+                    res_carver = SeamCarving(out)
+                    out_v = res_carver.show_vertical()
+                    out_h = res_carver.show_horizontal()
+                except Exception as e:
+                    st.exception(e)
+                    out_v, out_h = None, None
 
-                # enable download
-                out_bgr = cv2.cvtColor(out, cv2.COLOR_RGB2BGR)
-                ok, png_bytes = cv2.imencode(".png", out_bgr)
-                if ok:
-                    st.download_button(
-                        label="download result (PNG)",
-                        data=png_bytes.tobytes(),
-                        file_name="seam_carved.png",
-                        mime="image/png",
-                    )
+                r1, r2, r3 = st.columns(3)
+                with r1:
+                    st.caption("resized")
+                    st.image(out, channels="RGB", width="content")
+                    # enable download under the resized preview
+                    out_bgr = cv2.cvtColor(out, cv2.COLOR_RGB2BGR)
+                    ok, png_bytes = cv2.imencode(".png", out_bgr)
+                    if ok:
+                        st.download_button(
+                            label="download resized (PNG)",
+                            data=png_bytes.tobytes(),
+                            file_name="seam_carved.png",
+                            mime="image/png",
+                        )
+                with r2:
+                    st.caption("next vertical seam (resized)")
+                    if out_v is not None:
+                        st.image(out_v, channels="RGB", width="content")
+                with r3:
+                    st.caption("next horizontal seam (resized)")
+                    if out_h is not None:
+                        st.image(out_h, channels="RGB", width="content")
