@@ -28,7 +28,7 @@ if uploaded is not None:
         h, w = img_rgb.shape[:2]
 
         st.subheader("original")
-        st.image(img_rgb, channels="RGB", use_container_width=True)
+        st.image(img_rgb, channels="RGB", width="stretch")
 
         col1, col2 = st.columns(2)
         with col1:
@@ -50,7 +50,7 @@ if uploaded is not None:
                     out = None
             if out is not None:
                 st.subheader("result")
-                st.image(out, channels="RGB", use_container_width=True)
+                st.image(out, channels="RGB", width="stretch")
 
                 # enable download
                 out_bgr = cv2.cvtColor(out, cv2.COLOR_RGB2BGR)
@@ -62,4 +62,3 @@ if uploaded is not None:
                         file_name="seam_carved.png",
                         mime="image/png",
                     )
-                    
