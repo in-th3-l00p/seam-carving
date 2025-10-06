@@ -20,7 +20,7 @@ COPY requirements.txt ./
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 COPY src ./src
-COPY readme.md ./readme.md
+COPY README.md ./README.md
 
 EXPOSE 8501
 
