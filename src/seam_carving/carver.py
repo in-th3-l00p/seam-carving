@@ -1,8 +1,8 @@
 import numpy as np
 
 from .energy import ImageEnergy
-from .dp import dp_vertical, dp_horizontal
-from .seams import remove_vertical_seam, remove_horizontal_seam
+from .utils.dp import dp_vertical, dp_horizontal
+from .utils.seams import remove_vertical_seam, remove_horizontal_seam
 
 class SeamCarving:
     def __init__(self, image: np.ndarray):
