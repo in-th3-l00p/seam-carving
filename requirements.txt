@@ -1,3 +1,4 @@
 streamlit
 numpy
 watchdog
+opencv-python
